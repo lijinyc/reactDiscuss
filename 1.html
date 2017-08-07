@@ -1,0 +1,307 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <script src="js/react.js"></script>
+    <script src="js/react-dom.js"></script>
+    <script src="js/browser.min.js"></script>
+    <script src="js/ajax.js"></script>
+    <style>
+        body{
+            /*background: #000;*/
+            margin:0;
+            padding:0;
+        }
+        .con{
+            background: #fff;
+            width:729px;
+            margin:0 auto;
+            padding:10px;
+        }
+        .box1{
+            border:1px solid #c9d5e5;
+            padding:25px;
+            background: #f3f8fc;
+            overflow: auto;
+
+        }
+        .box1 textarea{
+            width:670px;
+            height:50px;
+        }
+        .box1 button{
+            float: right;
+            width:100px;
+            height:30px;
+            margin-top:18px;
+            border:1px solid #bcc2c2;
+            border-radius: 7%;;
+            background: url("images/1.png");
+        }
+        .box2{
+            clear: both;
+            border:1px solid #c9d5e5;
+            margin-top:10px;
+        }
+        .box2 ul{
+            list-style: none;
+            margin:0;
+            padding:0;
+        }
+        .box2Div1 ul li{
+            overflow: auto;
+            border-bottom:1px solid #ececec;
+        }
+        .box2Word{
+            margin: 15px 15px 0 15px;
+        }
+        .box2Operation{
+            margin: 0 15px;
+            font:16px/30px '微软雅黑';
+        }
+        .opeNum{
+            float: left;
+        }
+        .opeOpe{
+            float: right;
+        }
+        .box2Div2{
+            background: #f3f8fc;
+            overflow: hidden;
+            padding:10px 0 10px 0;
+        }
+        .box2Div2 ul{
+            float: right;
+        }
+        .box2Div2 li{
+            float: left;
+            border:1px solid #d9dade;
+            padding:5px 10px;
+            margin-right:5px;
+            cursor: pointer;
+        }
+        .active{
+            background: #d9dade;
+        }
+        .opeOpe a{
+            color: #000;
+            text-decoration: none;
+            margin-right:10px;
+        }
+    </style>
+</head>
+<body>
+	<div id="box"></div>
+<div class="con">
+    <!--<div class="box1">
+        <textarea></textarea>
+        <button>提交评论</button>
+    </div>-->
+    <div class="box2">
+        <!--<div class="box2Div1">-->
+            <!--<ul id="ul1">-->
+
+            <!--</ul>-->
+        <!--</div>-->
+        <div class="box2Div2">
+            <ul>
+                <!--<li class="active">1</li>-->
+                <!--<li>2</li>-->
+            </ul>
+        </div>
+    </div>
+</div>
+<script src="js/ajax.js"></script>
+<script type="text/babel">
+    var EventEmitter = {
+        _events: {},
+        dispatch: function (event, data) {
+            if (!this._events[event]) return; // no one is listening to this event
+            for (var i = 0; i < this._events[event].length; i++)
+                this._events[event][i](data);
+        },
+        subscribe: function (event, callback) {
+            if (!this._events[event]) this._events[event] = []; // new event
+            this._events[event].push(callback);
+        },
+        unSubscribe: function(event){
+            if(this._events && this._events[event]) {
+                delete this._events[event];
+            }
+        }
+    };
+	var Box1=React.createClass({
+        getInitialState:function(){
+            return {
+                textValue:''
+            }
+        },
+        handleChange: function(event) {
+            this.setState({textValue: event.target.value});
+        },
+		render:function(){
+			return (
+				<div>
+					<div className='box1'>
+						<textarea value={this.state.textValue} onChange={this.handleChange}></textarea>
+        				<button onClick={this.butFn}>提交评论</button>
+					</div>
+					<Box2/>
+				</div>
+
+			)
+		},
+		butFn:function(){
+            var This=this;
+            ajaxFun('http://localhost:8888/weibo.php',{act:'add',content:this.state.textValue},function(){
+                EventEmitter.dispatch('freshList');
+                This.setState({textValue:''});
+            });
+		}
+	});
+
+	var Box2=React.createClass({
+		render:function(){
+			return (
+				<div className='box2'>
+					<Box2Con1/>
+                    <PageBox/>
+				</div>
+			)
+		}
+	});
+	var Box2Con1=React.createClass({
+		getInitialState:function(){
+			return {
+				mes:[
+                    {id:1,text:'内容1点1',help:0,stepOn:0},
+                    {id:2,text:'内容2点2',help:0,stepOn:0}
+				]
+			}
+		},
+        componentDidMount() {
+            var This=this;
+            EventEmitter.subscribe('freshList', function(index){
+                This.fresh(index);
+            });
+            This.fresh(1);
+        },
+        fresh:function(index){
+            var This=this;
+            ajaxFun('http://localhost:8888/weibo.php',{act:'get',page:index},function(data){
+                // ajaxFun('list.json',{act:'get',page:1},function(data){
+                //当没有数据的时候,直接返回(防止没有数据的时候页面报错)
+                if(!data.list){
+                    return;
+                }
+                This.setState({
+                    mes:data.list
+                });
+            });
+        },
+		render:function(){
+			var This=this;
+			return (
+				<div className='box2Div1'>
+					<ul className="ul1">
+						{
+							this.state.mes.map(function(value,index){
+							return <li key={index}>
+										<div className="box2Word">{value.content}</div>
+			                    		<div className="box2Operation">
+			                       	 		<div className="opeNum">编号</div>
+			                       	 		<div className="opeOpe">
+			                           			<a href="#" onClick={This.helpFn.bind(This,index,value.id)}>赞<span>{This.state.mes[index].acc}</span></a>
+			                            		<a href="#" onClick={This.stepOnFn.bind(This,index,value.id)}>踩<span>{This.state.mes[index].ref}</span></a>
+			                            		<a href="#" onClick={This.deleteFn.bind(This,value.id)}>删除</a>
+			                       			</div>
+			                   			</div>
+									</li>
+							})
+						}
+					</ul>
+				</div>
+			)
+		},
+        //点击赞
+		helpFn:function(index,id){
+            var This=this;
+            ajaxFun('http://localhost:8888/weibo.php',{act:'acc',id:id},function(){
+                var mes = This.state.mes;
+                mes[index].acc=parseInt(mes[index].acc)+1;
+                This.setState({
+                    mes:mes
+                });
+            });
+		},
+        //点击踩
+		stepOnFn:function(index,id){
+            var This=this;
+            ajaxFun('http://localhost:8888/weibo.php',{act:'ref',id:id},function(){
+                var mes=This.state.mes;
+                mes[index].ref=parseInt(mes[index].ref)+1;
+                This.setState({
+                     mes:mes
+                });
+            })
+		},
+        //点击删除
+        deleteFn:function(id){
+            var This=this;
+            ajaxFun('http://localhost:8888/weibo.php',{act:'del',id:id},function(data){
+                This.componentDidMount();
+            });
+        }
+	});
+    var PageBox=React.createClass({
+        getInitialState:function(){
+            return {
+                pageCount:1,
+                pageNum:0
+            }
+        },
+        render:function(){
+            var This=this;
+            return (
+                    <div className='box2Div2'>
+                        <ul>
+                            {
+                                Array.from({length:this.state.pageCount }).map(function(value,index){
+                                    return <li key={index} onClick={This.pageClick.bind(This,index)} className={index==This.state.pageNum?'active':''}>{index+1}</li>;
+                                })
+                            }
+                        </ul>
+                    </div>
+            )
+        },
+        pageClick:function(index){
+            EventEmitter.dispatch('freshList',index+1);
+            this.setState({pageNum:index});
+        },
+        componentDidMount(){
+            var This=this;
+            ajaxFun('http://localhost:8888/weibo.php',{act:'get_page_count'},function(data){
+                This.setState({pageCount:data.count});
+            });
+        }
+    });
+	ReactDOM.render(
+		<Box1/>,
+		document.querySelector('.con')
+	);
+
+    function ajaxFun(url,data,succ) {
+//        alert(url)
+        ajax({
+            url: url,
+            data: data,
+            method: 'get',
+            dataType: 'json',
+            succ: succ
+        });
+    }
+</script>
+
+</body>
+</html>
